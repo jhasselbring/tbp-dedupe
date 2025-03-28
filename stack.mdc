@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- minimist: to deal with command line arguments
+- chalk: to color code the terminal
+- express js: for user interface
+- better-sqlite3: to manage the database
+
+
+Use style.mdc to figure out how I want to layout my code.
