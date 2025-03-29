@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dedupe Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --background-color: #f5f6fa;
+            --text-color: #2c3e50;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background-color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            color: var(--text-color);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .duplicates-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .duplicates-section h2 {
+            color: var(--text-color);
+            margin-bottom: 1rem;
+        }
+
+        .duplicate-group {
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            padding: 1rem;
+        }
+
+        .duplicate-group h3 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .file-list {
+            list-style: none;
+        }
+
+        .file-list li {
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .file-list li:last-child {
+            border-bottom: none;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-color);
+        }
+
+        .error {
+            color: var(--danger-color);
+            padding: 1rem;
+            background: #fde8e8;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .file-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Dedupe Dashboard</h1>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Files</h3>
+                <div class="value" id="totalFiles">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Duplicate Groups</h3>
+                <div class="value" id="duplicateGroups">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Duplicates</h3>
+                <div class="value" id="totalDuplicates">-</div>
+            </div>
+        </div>
+
+        <div class="duplicates-section">
+            <h2>Duplicate Files</h2>
+            <div id="duplicatesList" class="loading">Loading duplicates...</div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchDuplicates() {
+            try {
+                const response = await fetch('/api/duplicates');
+                const duplicates = await response.json();
+                
+                // Update stats
+                document.getElementById('totalFiles').textContent = duplicates.reduce((acc, group) => acc + group.count, 0);
+                document.getElementById('duplicateGroups').textContent = duplicates.length;
+                document.getElementById('totalDuplicates').textContent = duplicates.reduce((acc, group) => acc + (group.count - 1), 0);
+
+                // Update duplicates list
+                const duplicatesList = document.getElementById('duplicatesList');
+                duplicatesList.innerHTML = duplicates.map(group => `
+                    <div class="duplicate-group">
+                        <h3>Hash: ${group.hash}</h3>
+                        <ul class="file-list">
+                            ${group.paths.map(path => `
+                                <li>
+                                    <a href="#" onclick="openFile('${path.replace(/\\/g, '\\\\')}', event)" class="file-link">
+                                        ${path}
+                                    </a>
+                                </li>
+                            `).join('')}
+                        </ul>
+                        <div class="actions">
+                            <button class="btn btn-primary" onclick="keepOriginal('${group.hash}')">Keep Original</button>
+                            <button class="btn btn-danger" onclick="deleteDuplicates('${group.hash}')">Delete Duplicates</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('duplicatesList').innerHTML = `
+                    <div class="error">Error loading duplicates: ${error.message}</div>
+                `;
+            }
+        }
+
+        async function keepOriginal(hash) {
+            try {
+                const response = await fetch(`/api/duplicates/${hash}/keep-original`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    fetchDuplicates();
+                }
+            } catch (error) {
+                console.error('Error keeping original:', error);
+            }
+        }
+
+        async function deleteDuplicates(hash) {
+            if (!confirm('Are you sure you want to delete the duplicate files?')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/duplicates/${hash}/delete`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    fetchDuplicates();
+                }
+            } catch (error) {
+                console.error('Error deleting duplicates:', error);
+            }
+        }
+
+        async function openFile(filePath, event) {
+            event.preventDefault();
+            try {
+                const response = await fetch('/api/open-file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ path: filePath })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error('Error opening file:', data.error);
+                    alert(`Failed to open file: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error opening file:', error);
+                alert('Failed to open file. Check the console for details.');
+            }
+        }
+
+        // Initial load
+        fetchDuplicates();
+    </script>
+</body>
+</html> 
