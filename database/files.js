@@ -32,15 +32,30 @@ export function initializeDatabase() {
     db = new Database(dbPath);
 
     // Initialize database schema for files
-    // This creates a table to store file IDs, paths, and hash values
+    // This creates a table to store file IDs, paths, hash values, and file sizes
     // The SQL 'IF NOT EXISTS' clause ensures we don't create duplicate tables
     db.exec(`
         CREATE TABLE IF NOT EXISTS files (
             id TEXT PRIMARY KEY,
             path TEXT NOT NULL,
-            hash TEXT NOT NULL
+            hash TEXT NOT NULL,
+            size INTEGER DEFAULT 0
         )
     `);
+
+    // Check if we need to add the size column to an existing table
+    try {
+        // Try to get column info - if 'size' doesn't exist, this will throw an error
+        const hasSize = db.prepare("PRAGMA table_info(files)").all()
+            .some(col => col.name === 'size');
+        
+        if (!hasSize) {
+            log.info('Upgrading database schema to include file sizes');
+            db.exec('ALTER TABLE files ADD COLUMN size INTEGER DEFAULT 0');
+        }
+    } catch (error) {
+        log.error(`Error checking database schema: ${error.message}`);
+    }
 
     // Initialize metadata table by calling the function from meta.js
     initializeMetadataTable(db);
@@ -50,13 +65,13 @@ export function initializeDatabase() {
     
     // Statement to insert a new file record
     insertFile = db.prepare(`
-        INSERT INTO files (id, path, hash)
-        VALUES (@id, @path, @hash)
+        INSERT INTO files (id, path, hash, size)
+        VALUES (@id, @path, @hash, @size)
     `);
 
     // Statement to find files with duplicate hashes (identical content)
     getDuplicates = db.prepare(`
-        SELECT path, hash, COUNT(*) as count
+        SELECT path, hash, size, COUNT(*) as count
         FROM files
         GROUP BY hash
         HAVING count > 1
@@ -65,7 +80,7 @@ export function initializeDatabase() {
 
     // Statement to get all files with a specific hash
     getFilesByHash = db.prepare(`
-        SELECT path
+        SELECT path, size
         FROM files
         WHERE hash = ?
         ORDER BY path
@@ -73,7 +88,7 @@ export function initializeDatabase() {
 
     // Statement to get a specific file by its ID
     getFileById = db.prepare(`
-        SELECT path, hash
+        SELECT path, hash, size
         FROM files
         WHERE id = ?
     `);

@@ -86,7 +86,7 @@ export const META_KEYS = {
     START_TIME: 'scan_start_time',     // When the scan started
     END_TIME: 'scan_end_time',         // When the scan completed
     TARGET_DIR: 'target_directory',    // The directory being scanned
-    BASE_PATH: 'base_path'             // The base path for relative references
+    ABSOLUTE_PATH: 'absolute_path'             // The base path for relative references
 };
 
 /**
