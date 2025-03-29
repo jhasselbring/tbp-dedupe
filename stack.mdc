@@ -7,6 +7,6 @@ alwaysApply: false
 - chalk: to color code the terminal
 - express js: for user interface
 - better-sqlite3: to manage the database
-
+- crypto: Used to crypto.createHash('md5').update(path).digest('hex');
 
 Use style.mdc to figure out how I want to layout my code.

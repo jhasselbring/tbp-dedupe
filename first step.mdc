@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+The main idea of this application is to be able to deduplicate files in the provided directory.  We will do this first by scanning a directory for all files in the target directory and store the information in a sqlite3 database. We will then compare the files listed in the database based on their hash to find out if files are identical.  For each identical files, we will use the file with the shortest or shallowest directory as the main/original file and the rest are the duplicates.  We will then use express js to display the original and duplicates in a web ui where the user can verify if the files are indeed duplicates.  All files deemed as duplicatse will be moved to a different directory and the original will remain.
+
+The steps that should happen in onder to use the app would be the following:
+1.  The user will navigate to the directory that he or she want to deduplicate then use the command deduplicate on the terminal OR run deduplicate anywhere but pass the path of the target directory like deduplicate -t ./folder
+2. The app will set the parent of the target directory as the base directory
+3. The app will create the dedupe file (sqlite3 database) in the base directory. It should be named as <name of the target directory/folder>.dedupe.
+4. The app will scan the target direcory recursively and capture the md5 hash of the file path relative to the base directory and store it in the database as id, the relative path from the base directory as path and the md5 hash of the file as hash.
+
+
+Use stack.mdc to figure out which stack I prefer to use.
