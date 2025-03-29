@@ -3,17 +3,29 @@
 import { scanDirectory } from './lib/scanner.js';
 import { startServer } from './lib/server.js';
 import { targetDir, log, argv, dbExists, dbPath } from './lib/vars.js';
-import { closeDatabase, initializeDatabase } from './lib/db.js';
+import { closeDatabase, initializeDatabase } from './database/files.js';
 import fs from 'fs';
+import { getMeta, META_KEYS } from './database/meta.js';
 
 async function main() {
     try {
-        // If database exists and force flag is not set, skip scanning
+        // If database exists and force flag is not set, check if scan completed
         if (dbExists && !argv.force) {
-            log.info('Database already exists. Skipping scan...');
-            log.info('Starting web interface...');
-            startServer();
-            return;
+            // First initialize the database connection so we can query metadata
+            initializeDatabase();
+            
+            // Check if scan completed successfully
+            const scanEndTime = getMeta(META_KEYS.END_TIME);
+            
+            if (scanEndTime) {
+                log.info('Database already exists. Skipping scan...');
+                log.info('Starting web interface...');
+                startServer();
+                return;
+            } else {
+                log.warning('Found incomplete scan. Restarting scan...');
+                // Continue with scan (don't return here)
+            }
         }
 
         // If force flag is set and database exists, remove it
