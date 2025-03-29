@@ -218,7 +218,6 @@
                         </ul>
                         <div class="actions">
                             <button class="btn btn-primary" onclick="keepOriginal('${group.hash}')">Keep Original</button>
-                            <button class="btn btn-danger" onclick="deleteDuplicates('${group.hash}')">Delete Duplicates</button>
                         </div>
                     </div>
                 `).join('');
@@ -239,22 +238,6 @@
                 }
             } catch (error) {
                 console.error('Error keeping original:', error);
-            }
-        }
-
-        async function deleteDuplicates(hash) {
-            if (!confirm('Are you sure you want to delete the duplicate files?')) {
-                return;
-            }
-            try {
-                const response = await fetch(`/api/duplicates/${hash}/delete`, {
-                    method: 'POST'
-                });
-                if (response.ok) {
-                    fetchDuplicates();
-                }
-            } catch (error) {
-                console.error('Error deleting duplicates:', error);
             }
         }
 
