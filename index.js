@@ -2,11 +2,11 @@
 
 import { scanDirectory } from './lib/scanner.js';
 import { startServer } from './lib/server.js';
-import { targetDir, log, argv, dbExists, dbPath, debugMode, showDuplicates } from './lib/vars.js';
+import { targetDir, log, argv, dbExists, dbPath, debugMode, showDuplicates, autoRemoveDuplicates as autoRemove } from './lib/vars.js';
 import { closeDatabase, initializeDatabase } from './database/files.js';
 import fs from 'fs';
 import { getMeta, META_KEYS } from './database/meta.js';
-import { displayDuplicates, displayDuplicateSummary } from './lib/console-report.js';
+import { displayDuplicates, displayDuplicateSummary, autoRemoveDuplicates } from './lib/console-report.js';
 
 async function main() {
     try {
@@ -49,8 +49,19 @@ async function main() {
         if (debugMode) log.debug('Displaying duplicate summary');
         displayDuplicateSummary();
         
+        // Automatically remove duplicates if requested
+        if (autoRemove) {
+            if (debugMode) log.debug('Auto-remove flag detected, removing duplicates');
+            log.warning('Auto-removing duplicate files...');
+            const result = autoRemoveDuplicates();
+            
+            if (result.success) {
+                log.success(`Removed ${result.filesRemoved} duplicate files (${formatSize(result.spaceFreed)} freed)`);
+            }
+        }
+        
         // Show detailed duplicates in terminal if requested
-        if (showDuplicates) {
+        else if (showDuplicates) {
             if (debugMode) log.debug('Displaying detailed duplicate files report');
             displayDuplicates();
         }
@@ -64,6 +75,22 @@ async function main() {
         if (debugMode) log.debug(`Error details: ${JSON.stringify(error)}`);
         process.exit(1);
     }
+}
+
+/**
+ * formatSize - Converts bytes to a human-readable format
+ * Why it's needed: Makes file sizes more readable
+ * How it works: Divides by appropriate units and adds suffixes
+ * @param {number} bytes - The size in bytes
+ * @return {string} - Formatted size with units
+ */
+function formatSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 if (debugMode) {
