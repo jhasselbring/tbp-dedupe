@@ -70,6 +70,10 @@
             color: var(--primary-color);
         }
 
+        .waste-color {
+            color: var(--danger-color);
+        }
+
         .duplicates-section {
             background: white;
             padding: 1.5rem;
@@ -162,6 +166,41 @@
             text-decoration: underline;
             background-color: #f8f9fa;
         }
+
+        .file-size {
+            font-weight: bold;
+        }
+
+        .wasted-space {
+            color: var(--danger-color);
+        }
+
+        .size-badge {
+            background-color: #f0f0f0;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+
+        .original-badge {
+            background-color: #d3d3d3;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+
+        .file-entry {
+            display: flex;
+            align-items: center;
+        }
+
+        .original-file {
+            background-color: #f0f0f0;
+        }
+
+        .duplicate-file {
+            background-color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -182,6 +221,10 @@
             <div class="stat-card">
                 <h3>Total Duplicates</h3>
                 <div class="value" id="totalDuplicates">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Wasted Space</h3>
+                <div class="value waste-color" id="wastedSpace">-</div>
             </div>
         </div>
 
@@ -208,6 +251,13 @@
                 document.getElementById('totalFiles').textContent = duplicates.reduce((acc, group) => acc + group.count, 0);
                 document.getElementById('duplicateGroups').textContent = duplicates.length;
                 document.getElementById('totalDuplicates').textContent = duplicates.reduce((acc, group) => acc + (group.count - 1), 0);
+                
+                // Calculate and display total wasted space
+                const totalWastedBytes = duplicates.reduce((acc, group) => {
+                    // Use count-1 because one copy is considered original
+                    return acc + (group.size * (group.count - 1));
+                }, 0);
+                document.getElementById('wastedSpace').textContent = formatSize(totalWastedBytes);
 
                 // Update duplicates list
                 const duplicatesList = document.getElementById('duplicatesList');
@@ -219,19 +269,25 @@
                 
                 duplicatesList.innerHTML = duplicates.map(group => `
                     <div class="duplicate-group">
-                        <h3>Size: ${group.formattedSize || formatSize(group.size)} - Wasted: ${group.wastedSpace || formatSize(group.size * (group.count - 1))}</h3>
+                        <h3>
+                            <span class="file-size">${group.formattedSize || formatSize(group.size)}</span>
+                            <span class="wasted-space">Wasted: ${group.wastedSpace || formatSize(group.size * (group.count - 1))}</span>
+                        </h3>
                         <ul class="file-list">
                             ${(group.paths || []).map((item, index) => {
                                 // Handle both old format (string paths) and new format (objects with path property)
                                 const filePath = typeof item === 'string' ? item : item.path;
-                                const fileSize = item.formattedSize ? ` (${item.formattedSize})` : '';
-                                const isOriginal = index === 0 ? ' ✓ (Original)' : '';
+                                const fileSize = item.size ? `<span class="size-badge">${item.formattedSize || formatSize(item.size)}</span>` : '';
+                                const isOriginal = index === 0 ? '<span class="original-badge">Original</span>' : '';
                                 
                                 return `
-                                    <li>
-                                        <a href="#" onclick="openFile('${filePath.replace(/\\/g, '\\\\')}', event)" class="file-link">
-                                            ${filePath}${fileSize}${isOriginal}
-                                        </a>
+                                    <li class="${index === 0 ? 'original-file' : 'duplicate-file'}">
+                                        <div class="file-entry">
+                                            <a href="#" onclick="openFile('${filePath.replace(/\\/g, '\\\\')}', event)" class="file-link">
+                                                ${filePath}
+                                            </a>
+                                            ${fileSize} ${isOriginal}
+                                        </div>
                                     </li>
                                 `;
                             }).join('')}
