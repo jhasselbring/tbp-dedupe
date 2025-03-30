@@ -2,7 +2,7 @@
 
 import { scanDirectory } from './lib/scanner.js';
 import { startServer } from './lib/server.js';
-import { targetDir, log, argv, dbExists, dbPath, debugMode, showDuplicates, autoRemoveDuplicates as autoRemove } from './lib/vars.js';
+import { targetDir, log, argv, dbExists, dbPath, debugMode, showDuplicates, autoRemoveDuplicates as autoRemove, startServerMode } from './lib/vars.js';
 import { closeDatabase, initializeDatabase } from './database/files.js';
 import fs from 'fs';
 import { getMeta, META_KEYS } from './database/meta.js';
@@ -74,10 +74,17 @@ async function main() {
             displayDuplicates();
         }
         
-        log.info('Starting web interface...');
-        if (debugMode) log.debug('Initializing web server');
-        startServer();
-        if (debugMode) log.debug('Web server started');
+        // Only start the web server if the server flag is passed
+        if (startServerMode) {
+            log.info('Starting web interface...');
+            if (debugMode) log.debug('Initializing web server');
+            startServer();
+            if (debugMode) log.debug('Web server started');
+        } else {
+            if (debugMode) log.debug('Web server not started (use -w or --server flag to start)');
+            // Gracefully exit the application when not running the server
+            process.exit(0);
+        }
     } catch (error) {
         log.error(`Error: ${error.message}`);
         if (debugMode) log.debug(`Error details: ${JSON.stringify(error)}`);
