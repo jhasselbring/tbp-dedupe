@@ -53,10 +53,18 @@ async function main() {
         if (autoRemove) {
             if (debugMode) log.debug('Auto-remove flag detected, removing duplicates');
             log.warning('Auto-removing duplicate files...');
-            const result = autoRemoveDuplicates();
             
-            if (result.success) {
-                log.success(`Removed ${result.filesRemoved} duplicate files (${formatSize(result.spaceFreed)} freed)`);
+            try {
+                const result = autoRemoveDuplicates();
+                
+                if (result && result.success) {
+                    log.success(`Removed ${result.filesRemoved} duplicate files (${formatSize(result.spaceFreed)} freed)`);
+                } else {
+                    log.error('Failed to remove duplicates. Try using the web interface instead.');
+                }
+            } catch (error) {
+                log.error(`Error removing duplicates: ${error.message}`);
+                if (debugMode) log.debug(`Error details: ${JSON.stringify(error)}`);
             }
         }
         

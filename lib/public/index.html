@@ -195,7 +195,14 @@
         async function fetchDuplicates() {
             try {
                 const response = await fetch('/api/duplicates');
-                const duplicates = await response.json();
+                const data = await response.json();
+                
+                // Handle both formats - new format with {duplicates: [...]} and the old format with just array
+                const duplicates = data.duplicates || data;
+                
+                if (!Array.isArray(duplicates)) {
+                    throw new Error('Invalid data format received from server');
+                }
                 
                 // Update stats
                 document.getElementById('totalFiles').textContent = duplicates.reduce((acc, group) => acc + group.count, 0);
@@ -204,17 +211,30 @@
 
                 // Update duplicates list
                 const duplicatesList = document.getElementById('duplicatesList');
+                
+                if (duplicates.length === 0) {
+                    duplicatesList.innerHTML = '<div class="info">No duplicate files found.</div>';
+                    return;
+                }
+                
                 duplicatesList.innerHTML = duplicates.map(group => `
                     <div class="duplicate-group">
-                        <h3>Hash: ${group.hash}</h3>
+                        <h3>Size: ${group.formattedSize || formatSize(group.size)} - Wasted: ${group.wastedSpace || formatSize(group.size * (group.count - 1))}</h3>
                         <ul class="file-list">
-                            ${group.paths.map(path => `
-                                <li>
-                                    <a href="#" onclick="openFile('${path.replace(/\\/g, '\\\\')}', event)" class="file-link">
-                                        ${path}
-                                    </a>
-                                </li>
-                            `).join('')}
+                            ${(group.paths || []).map((item, index) => {
+                                // Handle both old format (string paths) and new format (objects with path property)
+                                const filePath = typeof item === 'string' ? item : item.path;
+                                const fileSize = item.formattedSize ? ` (${item.formattedSize})` : '';
+                                const isOriginal = index === 0 ? ' ✓ (Original)' : '';
+                                
+                                return `
+                                    <li>
+                                        <a href="#" onclick="openFile('${filePath.replace(/\\/g, '\\\\')}', event)" class="file-link">
+                                            ${filePath}${fileSize}${isOriginal}
+                                        </a>
+                                    </li>
+                                `;
+                            }).join('')}
                         </ul>
                         <div class="actions">
                             <button class="btn btn-primary" onclick="keepOriginal('${group.hash}')">Keep Original</button>
@@ -225,7 +245,16 @@
                 document.getElementById('duplicatesList').innerHTML = `
                     <div class="error">Error loading duplicates: ${error.message}</div>
                 `;
+                console.error('Error loading duplicates:', error);
             }
+        }
+        
+        // Simple function to format byte sizes when needed
+        function formatSize(bytes) {
+            if (!bytes || isNaN(bytes)) return '0 Bytes';
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
         async function keepOriginal(hash) {
